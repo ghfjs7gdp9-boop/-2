@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>注文管理</title>
+
+<style>
+body{
+    font-family:sans-serif;
+    background:#eef1f2;
+    margin:0;
+    padding-bottom:90px;
+}
+
+header{
+    background:#1b2a2f;
+    color:white;
+    padding:15px;
+}
+
+main{
+    padding:10px;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:15px;
+    margin-bottom:10px;
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin:5px 0;
+    border:1px solid #ccc;
+    border-radius:8px;
+    box-sizing:border-box;
+}
+
+button{
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.primary{
+    background:#0f766e;
+    color:white;
+    padding:10px 15px;
+}
+
+.danger{
+    background:#c0392b;
+    color:white;
+    padding:8px 12px;
+}
+
+.qty{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.qty button{
+    width:40px;
+    height:40px;
+}
+
+.product{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.view{
+    display:none;
+}
+
+.view.active{
+    display:block;
+}
+
+.bar{
+    position:fixed;
+    bottom:60px;
+    left:0;
+    right:0;
+    background:white;
+    border-top:1px solid #ccc;
+    padding:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    display:flex;
+    background:white;
+    border-top:1px solid #ccc;
+}
+
+nav button{
+    flex:1;
+    padding:15px;
+    background:white;
+}
+
+.order{
+    border-left:5px solid orange;
+}
+</style>
+</head>
+<body>
+
+<header>
+<h2>注文管理</h2>
+</header>
+
+<main>
+
+<section id="orderView" class="view active">
+
+<div class="card">
+<input
+id="customer"
+placeholder="注文者名">
+</div>
+
+<div id="productList"></div>
+
+</section>
+
+<section id="listView" class="view">
+<div id="orders"></div>
+</section>
+
+<section id="productView" class="view">
+
+<div class="card">
+
+<input
+id="productName"
+placeholder="商品名">
+
+<input
+id="productPrice"
+type="number"
+placeholder="金額">
+
+<button
+class="primary"
+onclick="addProduct()">
+商品追加
+</button>
+
+</div>
+
+<div id="manageProducts"></div>
+
+</section>
+
+</main>
+
+<div class="bar">
+
+<div>
+<div id="cartCount">0点</div>
+<b id="totalPrice">¥0</b>
+</div>
+
+<button
+class="primary"
+onclick="addOrder()">
+注文する
+</button>
+
+</div>
+
+<nav>
+<button onclick="showView('orderView')">注文</button>
+<button onclick="showView('listView')">一覧</button>
+<button onclick="showView('productView')">商品</button>
+</nav>
+
+<script>
+
+let products =
+JSON.parse(localStorage.getItem("products")||"[]");
+
+let orders =
+JSON.parse(localStorage.getItem("orders")||"[]");
+
+let cart = {};
+
+function save(){
+
+localStorage.setItem(
+"products",
+JSON.stringify(products)
+);
+
+localStorage.setItem(
+"orders",
+JSON.stringify(orders)
+);
+
+render();
+}
+
+function showView(id){
+
+document.querySelectorAll(".view")
+.forEach(v=>v.classList.remove("active"));
+
+document.getElementById(id)
+.classList.add("active");
+}
+
+function addProduct(){
+
+const name =
+document.getElementById("productName").value.trim();
+
+const price =
+Number(
+document.getElementById("productPrice").value
+);
+
+if(!name || !price) return;
+
+products.push({
+id:Date.now(),
+name,
+price
+});
+
+document.getElementById("productName").value="";
+document.getElementById("productPrice").value="";
+
+save();
+}
+
+function changeQty(id,val){
+
+cart[id]=(cart[id]||0)+val;
+
+if(cart[id] < 1){
+delete cart[id];
+}
+
+renderProducts();
+renderCart();
+}
+
+function renderProducts(){
+
+const div =
+document.getElementById("productList");
+
+div.innerHTML="";
+
+products.forEach(p=>{
+
+div.innerHTML += `
+<div class="card product">
+
+<div>
+<b>${p.name}</b><br>
+¥${p.price}
+</div>
+
+<div class="qty">
+
+<button onclick="changeQty(${p.id},-1)">
+−
+</button>
+
+<b>${cart[p.id]||0}</b>
+
+<button onclick="changeQty(${p.id},1)">
++
+</button>
+
+</div>
+
+</div>
+`;
+
+});
+
+renderManage();
+}
+
+function renderCart(){
+
+let count=0;
+let total=0;
+
+products.forEach(p=>{
+
+const qty =
+cart[p.id]||0;
+
+count += qty;
+total += qty*p.price;
+
+});
+
+document.getElementById("cartCount")
+.innerText = count+"点";
+
+document.getElementById("totalPrice")
+.innerText = "¥"+total.toLocaleString();
+
+}
+
+function addOrder(){
+
+const customer =
+document.getElementById("customer")
+.value.trim();
+
+if(!customer){
+alert("注文者名を入力");
+return;
+}
+
+const items=[];
+
+let total=0;
+
+products.forEach(p=>{
+
+const qty=cart[p.id]||0;
+
+if(qty){
+
+items.push({
+name:p.name,
+qty:qty,
+price:p.price
+});
+
+total += qty*p.price;
+}
+
+});
+
+if(items.length===0){
+return;
+}
+
+orders.unshift({
+id:Date.now(),
+customer,
+items,
+total
+});
+
+cart={};
+
+document.getElementById("customer")
+.value="";
+
+save();
+renderProducts();
+renderCart();
+}
+
+function completeOrder(id){
+
+orders =
+orders.filter(o=>o.id!==id);
+
+save();
+}
+
+function renderOrders(){
+
+const div =
+document.getElementById("orders");
+
+div.innerHTML="";
+
+orders.forEach(o=>{
+
+let items="";
+
+o.items.forEach(i=>{
+
+items += `
+<div>
+${i.name} × ${i.qty}
+</div>
+`;
+
+});
+
+div.innerHTML += `
+<div class="card order">
+
+<h3>${o.customer}</h3>
+
+${items}
+
+<br>
+
+<b>
+¥${o.total.toLocaleString()}
+</b>
+
+<br><br>
+
+<button
+class="danger"
+onclick="completeOrder(${o.id})">
+完了
+</button>
+
+</div>
+`;
+
+});
+
+}
+
+function renderManage(){
+
+const div =
+document.getElementById("manageProducts");
+
+div.innerHTML="";
+
+products.forEach(p=>{
+
+div.innerHTML += `
+<div class="card product">
+
+<div>
+${p.name}<br>
+¥${p.price}
+</div>
+
+<button
+class="danger"
+onclick="deleteProduct(${p.id})">
+削除
+</button>
+
+</div>
+`;
+
+});
+}
+
+function deleteProduct(id){
+
+products =
+products.filter(
+p=>p.id!==id
+);
+
+delete cart[id];
+
+save();
+renderProducts();
+renderCart();
+}
+
+function render(){
+
+renderProducts();
+renderOrders();
+renderCart();
+}
+
+render();
+
+</script>
+
+</body>
+</html>
