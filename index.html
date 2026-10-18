@@ -2,259 +2,464 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f2937">
 <title>注文管理</title>
 <style>
-body{font-family:sans-serif;background:#eef1f2;margin:0;padding-bottom:130px}
-header{background:#1b2a2f;color:#fff;padding:15px}
-header h2{margin:0}
-main{padding:10px}
-.card{background:#fff;border-radius:12px;padding:15px;margin-bottom:10px}
-input{width:100%;padding:10px;margin:5px 0;border:1px solid #ccc;border-radius:8px;box-sizing:border-box;font-size:16px}
-button{border:none;border-radius:8px;cursor:pointer;font-size:16px}
-button:disabled{opacity:.5;cursor:default}
-.primary{background:#0f766e;color:#fff;padding:10px 15px}
-.danger{background:#c0392b;color:#fff;padding:8px 12px}
-.qty{display:flex;align-items:center;gap:10px}
-.qty button{width:40px;height:40px}
-.product{display:flex;justify-content:space-between;align-items:center}
-.view{display:none}
-.view.active{display:block}
-.bar{position:fixed;bottom:56px;left:0;right:0;background:#fff;border-top:1px solid #ccc;padding:10px;display:none;justify-content:space-between;align-items:center}
-.bar.show{display:flex}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid #ccc}
-nav button{flex:1;padding:15px;background:#fff;border-radius:0}
-nav button.active{color:#0f766e;font-weight:bold;box-shadow:inset 0 -3px #0f766e}
-.order{border-left:5px solid orange}
-.order small{color:#666}
-.empty{text-align:center;color:#888;padding:20px}
-#toasts{position:fixed;top:12px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:10;pointer-events:none}
-.toast{background:#1b2a2f;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.3);animation:in .2s}
-.toast.error{background:#c0392b}
-@keyframes in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+  :root{
+    --bg:#f3f4f6; --card:#fff; --text:#111827; --sub:#6b7280; --line:#e5e7eb;
+    --main:#ea580c; --main-d:#c2410c; --ok:#16a34a; --ng:#dc2626; --dark:#1f2937;
+    --nav-h:60px; --bar-h:68px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;
+    background:var(--bg);color:var(--text);
+    padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  }
+  body.has-bar{padding-bottom:calc(var(--nav-h) + var(--bar-h) + env(safe-area-inset-bottom) + 12px)}
+  header{
+    position:sticky;top:0;z-index:20;background:var(--dark);color:#fff;
+    padding:calc(12px + env(safe-area-inset-top)) 16px 12px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  header h1{margin:0;font-size:17px;font-weight:700}
+  .status{font-size:12px;display:flex;align-items:center;gap:6px;opacity:.9}
+  .dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}
+  .dot.on{background:#4ade80}
+  main{max-width:720px;margin:0 auto;padding:14px}
+  .view{display:none}
+  .view.active{display:block}
+  .card{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+  h2{font-size:15px;margin:18px 4px 8px;color:var(--sub);font-weight:600}
+  h2:first-child{margin-top:4px}
+  .empty{text-align:center;color:var(--sub);padding:36px 12px;font-size:14px}
+
+  /* 商品登録 */
+  .form{display:grid;grid-template-columns:1fr 110px;gap:8px}
+  .form button{grid-column:1/-1}
+  input{
+    font:inherit;font-size:16px;padding:12px;border:1px solid var(--line);
+    border-radius:10px;background:#fff;width:100%;min-width:0;
+  }
+  input:focus{outline:2px solid var(--main);border-color:transparent}
+  .btn{
+    font:inherit;font-weight:700;border:0;border-radius:10px;padding:13px 16px;
+    background:var(--main);color:#fff;cursor:pointer;
+  }
+  .btn:active{background:var(--main-d)}
+  .btn.ok{background:var(--ok)}
+  .btn.ghost{background:#e5e7eb;color:var(--text)}
+  .btn:disabled{opacity:.45}
+
+  .list{display:flex;flex-direction:column;gap:8px}
+  .row{
+    background:var(--card);border-radius:14px;padding:12px 14px;
+    display:flex;align-items:center;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  .row .name{flex:1;font-weight:600;word-break:break-all}
+  .row .price{color:var(--sub);font-size:14px;white-space:nowrap}
+  .del{
+    border:0;background:#fee2e2;color:var(--ng);font:inherit;font-weight:700;
+    border-radius:8px;padding:8px 12px;cursor:pointer;
+  }
+
+  /* 注文 */
+  .item{
+    background:var(--card);border-radius:14px;padding:12px 14px;
+    display:flex;align-items:center;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  .item.sel{outline:2px solid var(--main)}
+  .item .info{flex:1;min-width:0}
+  .item .name{font-weight:700;word-break:break-all}
+  .item .price{color:var(--sub);font-size:14px;margin-top:2px}
+  .qty{display:flex;align-items:center;gap:6px}
+  .qty button{
+    width:44px;height:44px;border-radius:50%;border:0;font-size:24px;font-weight:700;
+    background:#e5e7eb;color:var(--text);cursor:pointer;line-height:1;
+  }
+  .qty button.plus{background:var(--main);color:#fff}
+  .qty .n{min-width:30px;text-align:center;font-size:20px;font-weight:700}
+
+  /* 合計バー（注文画面のみ） */
+  #totalbar{
+    position:fixed;left:0;right:0;
+    bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+    height:var(--bar-h);background:var(--dark);color:#fff;z-index:30;
+    display:none;align-items:center;gap:10px;padding:0 14px;
+    box-shadow:0 -4px 12px rgba(0,0,0,.15);
+  }
+  #totalbar.show{display:flex}
+  #totalbar .sum{flex:1;line-height:1.25}
+  #totalbar .cnt{font-size:12px;opacity:.75}
+  #totalbar .amt{font-size:22px;font-weight:800}
+  #totalbar .btn{padding:14px 20px}
+
+  /* 注文一覧 */
+  .order{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border-left:6px solid var(--main)}
+  .order .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .order .no{font-size:22px;font-weight:800}
+  .order .time{font-size:13px;color:var(--sub)}
+  .order ul{list-style:none;margin:0 0 10px;padding:0}
+  .order li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-size:16px}
+  .order li b{font-size:18px}
+  .order .foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .order .tot{font-weight:800;font-size:18px}
+  .order .btn{padding:14px 22px;font-size:16px}
+
+  /* ナビ */
+  nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;background:#fff;
+    border-top:1px solid var(--line);display:flex;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  nav button{
+    flex:1;height:var(--nav-h);border:0;background:none;font:inherit;font-size:12px;
+    color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    cursor:pointer;position:relative;
+  }
+  nav button .ic{font-size:20px}
+  nav button.active{color:var(--main);font-weight:700}
+  .badge{
+    position:absolute;top:6px;left:calc(50% + 8px);background:var(--ng);color:#fff;
+    font-size:11px;font-weight:700;min-width:18px;height:18px;border-radius:9px;
+    padding:0 5px;display:none;align-items:center;justify-content:center;
+  }
+  .badge.show{display:flex}
+
+  /* トースト */
+  #toasts{
+    position:fixed;left:0;right:0;top:calc(64px + env(safe-area-inset-top));z-index:100;
+    display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 14px;
+  }
+  .toast{
+    background:rgba(17,24,39,.94);color:#fff;padding:12px 18px;border-radius:12px;
+    font-size:15px;font-weight:600;max-width:100%;box-shadow:0 6px 18px rgba(0,0,0,.25);
+    animation:in .25s ease-out;
+  }
+  .toast.ok{background:rgba(22,163,74,.96)}
+  .toast.ng{background:rgba(220,38,38,.96)}
+  .toast.info{background:rgba(234,88,12,.96)}
+  .toast.out{animation:out .25s ease-in forwards}
+  @keyframes in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+  @keyframes out{to{opacity:0;transform:translateY(-10px)}}
 </style>
 </head>
 <body>
 
-<header><h2>注文管理</h2></header>
-<div id="toasts"></div>
+<header>
+  <h1>注文管理</h1>
+  <div class="status"><span class="dot" id="dot"></span><span id="stat">接続中…</span></div>
+</header>
 
 <main>
-  <section id="orderView" class="view active">
-    <div id="productList"></div>
+  <!-- 注文 -->
+  <section class="view active" id="v-order">
+    <h2>商品をタップして注文</h2>
+    <div class="list" id="orderItems"></div>
   </section>
 
-  <section id="listView" class="view">
-    <div id="orders"></div>
+  <!-- 注文一覧 -->
+  <section class="view" id="v-list">
+    <h2>未完了の注文</h2>
+    <div class="list" id="orderList"></div>
   </section>
 
-  <section id="productView" class="view">
+  <!-- 商品管理 -->
+  <section class="view" id="v-prod">
+    <h2>商品を登録</h2>
     <div class="card">
-      <input id="productName" placeholder="商品名">
-      <input id="productPrice" type="number" inputmode="numeric" placeholder="金額">
-      <button class="primary" id="addProductBtn">商品追加</button>
+      <div class="form">
+        <input id="pName" type="text" placeholder="商品名" maxlength="40" autocomplete="off">
+        <input id="pPrice" type="number" inputmode="numeric" placeholder="価格" min="0" step="1">
+        <button class="btn" id="pAdd">登録する</button>
+      </div>
     </div>
-    <div id="manageProducts"></div>
+    <h2>登録済みの商品</h2>
+    <div class="list" id="prodList"></div>
   </section>
 </main>
 
-<div class="bar" id="totalBar">
-  <div>
-    <div id="cartCount">0点</div>
-    <b id="totalPrice">¥0</b>
+<!-- 合計バー：注文画面のみ -->
+<div id="totalbar">
+  <div class="sum">
+    <div class="cnt" id="barCnt">0点</div>
+    <div class="amt" id="barAmt">¥0</div>
   </div>
-  <button class="primary" id="orderBtn">注文する</button>
+  <button class="btn ghost" id="barClear">クリア</button>
+  <button class="btn" id="barSubmit">注文する</button>
 </div>
 
 <nav>
-  <button data-view="orderView" class="active">注文</button>
-  <button data-view="listView">一覧</button>
-  <button data-view="productView">商品</button>
+  <button data-tab="order" class="active"><span class="ic">🛒</span>注文</button>
+  <button data-tab="list"><span class="ic">📋</span>注文一覧<span class="badge" id="badge">0</span></button>
+  <button data-tab="prod"><span class="ic">🍱</span>商品</button>
 </nav>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore, collection, addDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<div id="toasts"></div>
 
-/* ===== Firebase設定（ここを自分の設定に置き換え） ===== */
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCRQjuhpEkcioCPxleXLCISE1enFQD39w4",
+  authDomain: "unko-19e65.firebaseapp.com",
+  projectId: "unko-19e65",
+  storageBucket: "unko-19e65.firebasestorage.app",
+  messagingSenderId: "129526123116",
+  appId: "1:129526123116:web:ad0680e2d74b5c162e2649"
 };
-/* ===================================================== */
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-const db = getFirestore(initializeApp(firebaseConfig));
-const productsRef = collection(db, "products");
-const ordersRef = collection(db, "orders");
-
-let products = [];
-let orders = [];
-let cart = {};
-let currentView = "orderView";
-let ordersReady = false;
+/* ---------- 状態 ---------- */
+let products = [];      // {id,name,price,createdAt}
+let orders = [];        // {id,number,items,total}
+let cart = {};          // {productId: qty}
+let currentTab = 'order';
+let firstProducts = true, firstOrders = true;
 
 const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>"']/g, c =>
-  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const yen = n => '¥' + Number(n).toLocaleString('ja-JP');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function toast(msg, isError = false){
-  const el = document.createElement("div");
-  el.className = "toast" + (isError ? " error" : "");
+/* ---------- トースト ---------- */
+function toast(msg, type = 'info', ms = 2600){
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
   el.textContent = msg;
-  $("toasts").appendChild(el);
-  setTimeout(() => el.remove(), 2500);
+  $('toasts').appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 260);
+  }, ms);
 }
 
-/* ---------- 画面切替 ---------- */
-function showView(id){
-  currentView = id;
-  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === id));
-  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.view === id));
-  $("totalBar").classList.toggle("show", id === "orderView");
+/* ---------- タブ ---------- */
+function setTab(t){
+  currentTab = t;
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + t));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  updateBar();
+  window.scrollTo(0, 0);
 }
-document.querySelectorAll("nav button").forEach(b =>
-  b.addEventListener("click", () => showView(b.dataset.view)));
-showView("orderView");
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 
-/* ---------- リアルタイム同期 ---------- */
-onSnapshot(query(productsRef, orderBy("createdAt")), snap => {
-  products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  // 他端末で削除された商品はカートからも除外
-  const ids = new Set(products.map(p => p.id));
-  Object.keys(cart).forEach(k => { if(!ids.has(k)) delete cart[k]; });
-  renderProducts();
-  renderManage();
-  renderCart();
-}, err => toast("商品の取得に失敗: " + err.message, true));
+/* ---------- 接続表示 ---------- */
+function setOnline(ok){
+  $('dot').classList.toggle('on', ok);
+  $('stat').textContent = ok ? 'リアルタイム同期中' : 'オフライン';
+}
+window.addEventListener('online', () => setOnline(true));
+window.addEventListener('offline', () => setOnline(false));
 
-onSnapshot(query(ordersRef, orderBy("createdAt", "desc")), snap => {
-  if(ordersReady){
+/* ---------- 商品の購読 ---------- */
+db.collection('products').onSnapshot(snap => {
+  setOnline(true);
+  if (!firstProducts){
     snap.docChanges().forEach(ch => {
-      if(ch.type === "added" && !ch.doc.metadata.hasPendingWrites) toast("新しい注文が入りました");
+      if (snap.metadata.hasPendingWrites) return; // 自分の操作は別途トースト
+      const d = ch.doc.data();
+      if (ch.type === 'added') toast('商品追加：' + d.name, 'info');
+      if (ch.type === 'removed') toast('商品削除：' + d.name, 'info');
     });
   }
-  ordersReady = true;
-  orders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  renderOrders();
-}, err => toast("注文の取得に失敗: " + err.message, true));
-
-/* ---------- 商品管理 ---------- */
-$("addProductBtn").addEventListener("click", async () => {
-  const name = $("productName").value.trim();
-  const price = Number($("productPrice").value);
-  if(!name || !(price > 0)){ toast("商品名と金額を入力してください", true); return; }
-  try{
-    await addDoc(productsRef, { name, price, createdAt: serverTimestamp() });
-    $("productName").value = "";
-    $("productPrice").value = "";
-    toast("商品を追加しました");
-  }catch(e){ toast("追加に失敗: " + e.message, true); }
-});
-
-async function deleteProduct(id){
-  if(!confirm("この商品を削除しますか？")) return;
-  try{
-    await deleteDoc(doc(db, "products", id));
-    toast("商品を削除しました");
-  }catch(e){ toast("削除に失敗: " + e.message, true); }
-}
-
-/* ---------- 注文 ---------- */
-function changeQty(id, val){
-  cart[id] = (cart[id] || 0) + val;
-  if(cart[id] < 1) delete cart[id];
+  firstProducts = false;
+  products = snap.docs.map(d => ({id: d.id, ...d.data()}))
+    .sort((a, b) => (a.createdAt?.toMillis?.() ?? Date.now()) - (b.createdAt?.toMillis?.() ?? Date.now()));
+  // 削除された商品をカートから除く
+  Object.keys(cart).forEach(id => { if (!products.some(p => p.id === id)) delete cart[id]; });
   renderProducts();
-  renderCart();
+  renderOrderItems();
+  updateBar();
+}, err => { console.error(err); setOnline(false); toast('商品の読み込みに失敗しました', 'ng', 4000); });
+
+/* ---------- 注文の購読 ---------- */
+db.collection('orders').orderBy('number').onSnapshot(snap => {
+  setOnline(true);
+  if (!firstOrders){
+    snap.docChanges().forEach(ch => {
+      if (snap.metadata.hasPendingWrites) return;
+      const d = ch.doc.data();
+      if (ch.type === 'added') toast('🔔 新しい注文 #' + d.number, 'info', 3500);
+      if (ch.type === 'removed') toast('注文 #' + d.number + ' が完了しました', 'ok');
+    });
+  }
+  firstOrders = false;
+  orders = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  renderOrders();
+}, err => { console.error(err); setOnline(false); toast('注文の読み込みに失敗しました', 'ng', 4000); });
+
+/* ---------- 商品登録・削除 ---------- */
+$('pAdd').onclick = async () => {
+  const name = $('pName').value.trim();
+  const price = parseInt($('pPrice').value, 10);
+  if (!name) return toast('商品名を入力してください', 'ng');
+  if (isNaN(price) || price < 0) return toast('価格を正しく入力してください', 'ng');
+  $('pAdd').disabled = true;
+  try{
+    await db.collection('products').add({
+      name, price, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    $('pName').value = ''; $('pPrice').value = '';
+    $('pName').focus();
+    toast('登録しました：' + name, 'ok');
+  }catch(e){
+    console.error(e); toast('登録に失敗しました', 'ng', 4000);
+  }finally{
+    $('pAdd').disabled = false;
+  }
+};
+$('pPrice').addEventListener('keydown', e => { if (e.key === 'Enter') $('pAdd').click(); });
+
+async function delProduct(id){
+  const p = products.find(x => x.id === id);
+  if (!p || !confirm('「' + p.name + '」を削除しますか？')) return;
+  try{
+    await db.collection('products').doc(id).delete();
+    toast('削除しました：' + p.name, 'ok');
+  }catch(e){
+    console.error(e); toast('削除に失敗しました', 'ng', 4000);
+  }
 }
 
-$("orderBtn").addEventListener("click", async () => {
-  const items = products
-    .filter(p => cart[p.id])
-    .map(p => ({ name: p.name, qty: cart[p.id], price: p.price }));
-  if(!items.length){ toast("商品を選んでください", true); return; }
-  const total = items.reduce((s, i) => s + i.qty * i.price, 0);
-
-  $("orderBtn").disabled = true;
-  try{
-    await addDoc(ordersRef, { items, total, createdAt: serverTimestamp() });
-    cart = {};
-    renderProducts();
-    renderCart();
-    toast("注文しました");
-  }catch(e){ toast("注文に失敗: " + e.message, true); }
-  $("orderBtn").disabled = false;
-});
-
-async function completeOrder(id){
-  try{
-    await deleteDoc(doc(db, "orders", id));
-    toast("注文を完了しました");
-  }catch(e){ toast("完了に失敗: " + e.message, true); }
-}
-
-/* ---------- 描画 ---------- */
+/* ---------- 描画：商品管理 ---------- */
 function renderProducts(){
-  $("productList").innerHTML = products.length ? products.map(p => `
-    <div class="card product">
-      <div><b>${esc(p.name)}</b><br>¥${p.price.toLocaleString()}</div>
-      <div class="qty">
-        <button data-act="dec" data-id="${p.id}">−</button>
-        <b>${cart[p.id] || 0}</b>
-        <button data-act="inc" data-id="${p.id}">+</button>
-      </div>
-    </div>`).join("")
-    : `<div class="empty">商品がありません。「商品」タブで追加してください</div>`;
+  const el = $('prodList');
+  if (!products.length){ el.innerHTML = '<div class="empty">商品がまだありません</div>'; return; }
+  el.innerHTML = products.map(p => `
+    <div class="row">
+      <div class="name">${esc(p.name)}</div>
+      <div class="price">${yen(p.price)}</div>
+      <button class="del" data-del="${p.id}">削除</button>
+    </div>`).join('');
+  el.querySelectorAll('[data-del]').forEach(b => b.onclick = () => delProduct(b.dataset.del));
 }
 
-function renderCart(){
+/* ---------- 描画：注文画面 ---------- */
+function renderOrderItems(){
+  const el = $('orderItems');
+  if (!products.length){
+    el.innerHTML = '<div class="empty">商品がありません。<br>「商品」タブから登録してください。</div>';
+    return;
+  }
+  el.innerHTML = products.map(p => {
+    const q = cart[p.id] || 0;
+    return `
+    <div class="item ${q ? 'sel' : ''}">
+      <div class="info">
+        <div class="name">${esc(p.name)}</div>
+        <div class="price">${yen(p.price)}</div>
+      </div>
+      <div class="qty">
+        ${q ? `<button data-minus="${p.id}" aria-label="減らす">−</button><span class="n">${q}</span>` : ''}
+        <button class="plus" data-plus="${p.id}" aria-label="増やす">＋</button>
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-plus]').forEach(b => b.onclick = () => changeQty(b.dataset.plus, 1));
+  el.querySelectorAll('[data-minus]').forEach(b => b.onclick = () => changeQty(b.dataset.minus, -1));
+}
+function changeQty(id, d){
+  const n = Math.max(0, Math.min(99, (cart[id] || 0) + d));
+  if (n) cart[id] = n; else delete cart[id];
+  renderOrderItems();
+  updateBar();
+}
+
+/* ---------- 合計バー ---------- */
+function cartSummary(){
   let count = 0, total = 0;
   products.forEach(p => {
     const q = cart[p.id] || 0;
-    count += q;
-    total += q * p.price;
+    count += q; total += q * p.price;
   });
-  $("cartCount").textContent = count + "点";
-  $("totalPrice").textContent = "¥" + total.toLocaleString();
+  return {count, total};
 }
+function updateBar(){
+  const {count, total} = cartSummary();
+  const show = currentTab === 'order' && count > 0;
+  $('totalbar').classList.toggle('show', show);
+  document.body.classList.toggle('has-bar', show);
+  $('barCnt').textContent = count + '点';
+  $('barAmt').textContent = yen(total);
+}
+$('barClear').onclick = () => { cart = {}; renderOrderItems(); updateBar(); };
 
+/* ---------- 注文確定（連番は transaction で採番） ---------- */
+$('barSubmit').onclick = async () => {
+  const items = products.filter(p => cart[p.id])
+    .map(p => ({name: p.name, price: p.price, qty: cart[p.id]}));
+  if (!items.length) return;
+  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  $('barSubmit').disabled = true;
+  try{
+    const counterRef = db.collection('meta').doc('counter');
+    const orderRef = db.collection('orders').doc();
+    let number = 0;
+    await db.runTransaction(async t => {
+      const c = await t.get(counterRef);
+      number = (c.exists ? c.data().n : 0) + 1;
+      t.set(counterRef, {n: number});
+      t.set(orderRef, {
+        number, items, total,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    cart = {};
+    renderOrderItems(); updateBar();
+    toast('注文 #' + number + ' を受け付けました（' + yen(total) + '）', 'ok', 3000);
+  }catch(e){
+    console.error(e); toast('注文に失敗しました。通信を確認してください', 'ng', 4000);
+  }finally{
+    $('barSubmit').disabled = false;
+  }
+};
+
+/* ---------- 描画：注文一覧 ---------- */
+function fmtTime(ts){
+  const d = ts?.toDate?.() ?? new Date();
+  return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+}
 function renderOrders(){
-  $("orders").innerHTML = orders.length ? orders.map(o => {
-    const t = o.createdAt ? o.createdAt.toDate().toLocaleTimeString("ja-JP", {hour:"2-digit", minute:"2-digit"}) : "送信中";
-    return `
-    <div class="card order">
-      <small>${t}</small>
-      ${o.items.map(i => `<div>${esc(i.name)} × ${i.qty}</div>`).join("")}
-      <p><b>¥${o.total.toLocaleString()}</b></p>
-      <button class="danger" data-act="complete" data-id="${o.id}">完了</button>
-    </div>`;
-  }).join("") : `<div class="empty">注文はありません</div>`;
+  const el = $('orderList');
+  const b = $('badge');
+  b.textContent = orders.length;
+  b.classList.toggle('show', orders.length > 0);
+  if (!orders.length){ el.innerHTML = '<div class="empty">未完了の注文はありません</div>'; return; }
+  el.innerHTML = orders.map(o => `
+    <div class="order">
+      <div class="head">
+        <div class="no">#${o.number}</div>
+        <div class="time">${fmtTime(o.createdAt)}</div>
+      </div>
+      <ul>
+        ${o.items.map(i => `<li><span>${esc(i.name)}</span><b>× ${i.qty}</b></li>`).join('')}
+      </ul>
+      <div class="foot">
+        <div class="tot">${yen(o.total)}</div>
+        <button class="btn ok" data-done="${o.id}">完了</button>
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('[data-done]').forEach(btn => btn.onclick = () => completeOrder(btn.dataset.done, btn));
 }
 
-function renderManage(){
-  $("manageProducts").innerHTML = products.map(p => `
-    <div class="card product">
-      <div>${esc(p.name)}<br>¥${p.price.toLocaleString()}</div>
-      <button class="danger" data-act="delProduct" data-id="${p.id}">削除</button>
-    </div>`).join("");
+/* ---------- 注文完了：削除 → 全端末から消える ---------- */
+async function completeOrder(id, btn){
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  btn.disabled = true;
+  try{
+    await db.collection('orders').doc(id).delete();
+    toast('注文 #' + o.number + ' を完了しました', 'ok');
+  }catch(e){
+    console.error(e); btn.disabled = false;
+    toast('完了処理に失敗しました', 'ng', 4000);
+  }
 }
 
-/* ---------- クリック処理（イベント委譲） ---------- */
-document.addEventListener("click", e => {
-  const b = e.target.closest("[data-act]");
-  if(!b) return;
-  const id = b.dataset.id;
-  if(b.dataset.act === "inc") changeQty(id, 1);
-  else if(b.dataset.act === "dec") changeQty(id, -1);
-  else if(b.dataset.act === "complete") completeOrder(id);
-  else if(b.dataset.act === "delProduct") deleteProduct(id);
-});
+renderProducts(); renderOrderItems(); renderOrders();
 </script>
 </body>
 </html>
